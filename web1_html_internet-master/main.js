@@ -1,30 +1,42 @@
-/*
-var http = require('http');
-var fs = require('fs');
-var app = http.createServer(function(request,response){
-  //localhost 접속시 포트번호 생략하면 기본 80번포트를 사용함
-    var url = request.url;
-    if(request.url == '/'){
-      url = '/index.html';
-    }
-    if(request.url == '/favicon.ico'){
-      return response.writeHead(404);
-    }
-    response.writeHead(200);
-    console.log(__dirname + url);*/
-    /*fs.readFileSync는 (__dirname 키워드 + url) 에 저장된 파일 경로를 읽은 후
-    실행하는데, 이는 동기 처리를 해야할 때 사용하게 됨
-    */
-   /*
-    response.end(fs.readFileSync(__dirname + url));
- 
-});
-app.listen(3000);
-*/
 var http = require('http');
 var fs = require('fs');
 var url = require('url');
- 
+
+// 템플릿 변수를 함수화 한것
+function templateHtml(title, list, body){
+  return `
+  <!doctype html>
+  <html>
+  <head>
+    <title>WEB1 - ${title}</title>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <h1><a href="/">WEB</a></h1>
+    ${list}
+    ${body}
+  </body>
+  </html>
+  `;
+  /* ${body} 대체 전 코드
+  <h2>${title}</h2>
+    <p>${description}</p>
+  */
+}
+
+// 파일 리스트에 대한 템플릿 함수
+function templateList(filelist){
+  var list = '<ul>';
+  var i = 0;
+  while (i < filelist.length){
+    list = list + `<li><a href="/?id=${filelist[i]}">${filelist[i]}</a></li>`;
+    i = i + 1;
+  }
+  list = list + '</ul>';
+  return list;
+}
+
+
 var app = http.createServer(function(request,response){
     var _url = request.url;
     var queryData = url.parse(_url, true).query;
@@ -51,37 +63,12 @@ var app = http.createServer(function(request,response){
         fs.readdir('D:/D드라이브 고유파일/Nodejs/data/', function(error, filelist){
           var title = 'Welcome';
           var description = 'Hello, Node.js';
-          /*
-          var list = `<ul>
-              <li><a href="/?id=HTML">HTML</a></li>
-              <li><a href="/?id=CSS">CSS</a></li>
-              <li><a href="/?id=JavaScript">JavaScript</a></li>
-            </ul>`;
-          */
 
-          var list = '<ul>';
-          var i = 0;
-          while (i < filelist.length){
-            list = list + `<li><a href="/?id=${filelist[i]}">${filelist[i]}</a></li>`;
-            i = i + 1;
-          }
-          list = list + '</ul>';
+          var list = templateList(filelist);
 
-          var template =`
-          <!doctype html>
-          <html>
-          <head>
-            <title>WEB1 - ${title}</title>
-            <meta charset="utf-8">
-          </head>
-          <body>
-            <h1><a href="/">WEB</a></h1>
-            ${list}
-            <h2>${title}</h2>
-            <p>${description}</p>
-          </body>
-          </html>
-          `;
+          // template 변수에 html 코드가 아닌 함수를 넣으면 코드 간소화 가능
+          var template = templateHtml(title, list, `<h2>${title}</h2>
+          <p>${description}</p>`);
           response.writeHead(200);
           //여기서 localhost:3000?id=[id값]을 입력할 때 id값에 따라 출력이 결정됨
           response.end(template);
@@ -98,30 +85,13 @@ var app = http.createServer(function(request,response){
               <li><a href="/?id=JavaScript">JavaScript</a></li>
             </ul>`;
           */
-          var list = '<ul>';
-          var i = 0;
-          while (i < filelist.length) {
-            list = list + `<li><a href="/?id=${filelist[i]}">${filelist[i]}</a></li>`;
-            i = i + 1;
-          }
-          list = list + '</ul>';
+ 
+          var list = templateList(filelist);
+
           fs.readFile(`D:/D드라이브 고유파일/Nodejs/data/${queryData.id}`, 'utf-8', function(err, description){
             var title = queryData.id;
-            var template =`
-            <!doctype html>
-            <html>
-            <head>
-              <title>WEB1 - ${title}</title>
-              <meta charset="utf-8">
-            </head>
-            <body>
-              <h1><a href="/">WEB</a></h1>
-              ${list}
-              <h2>${title}</h2>
-              <p>${description}</p>
-            </body>
-            </html>
-            `;
+            var template = templateHtml(title, list, `<h2>${title}</h2>
+            <p>${description}</p>`);
             response.writeHead(200);
             //여기서 localhost:3000?id=[id값]을 입력할 때 id값에 따라 출력이 결정됨
             response.end(template);
