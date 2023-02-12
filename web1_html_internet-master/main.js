@@ -1,6 +1,7 @@
 var http = require('http');
 var fs = require('fs');
 var url = require('url');
+var qs = require('querystring');
 
 // 템플릿 변수를 함수화 한것
 function templateHtml(title, list, body){
@@ -14,6 +15,7 @@ function templateHtml(title, list, body){
   <body>
     <h1><a href="/">WEB</a></h1>
     ${list}
+    <a href="/create">Create</a>
     ${body}
   </body>
   </html>
@@ -73,8 +75,6 @@ var app = http.createServer(function(request,response){
           //여기서 localhost:3000?id=[id값]을 입력할 때 id값에 따라 출력이 결정됨
           response.end(template);
         });
-
-        
       }
       else{
         fs.readdir('D:/D드라이브 고유파일/Nodejs/data/', function(error, filelist){
@@ -102,6 +102,56 @@ var app = http.createServer(function(request,response){
     }
     // li의 a href부분에 /?id=[id값]을 넣으면 id값에 따라 title값이 바뀌는 것을 볼 수 있음.
     // response.end(fs.readFileSync(__dirname + url));
+
+    else if(pathname === '/create')
+    {
+      if(queryData.id === undefined) {
+        fs.readdir('D:/D드라이브 고유파일/Nodejs/data', function(error, filelist){
+          var title = 'WEB-Create';
+          var list = templateList(filelist);
+          var template = templateHtml(title, list, `
+            <form action="https://localhost:3000/create_process" method="post">
+            <p><input type="text" name="title" 
+            placeholder="title"></p>
+            <p>
+                <textarea name="description" 
+                placeholder="description"></textarea>
+            </p>
+            <p>
+                <input type="submit">
+            </p>
+            </form>
+          `);
+          response.writeHead(200);
+          response.end(template);
+        });
+      }
+    }
+    else if(pathname === '/create_process') {
+      var body = '';
+      // POST방식 데이터가 많을 경우를 대비해서 데이터에 대한 처리 방법 제공
+      // 서버쪽에서 요청을 수신할 때 마다 콜백함수 호출하도록 약속되어 있음
+      request.on('data', function(data){
+        body += data;
+
+        // 주는 데이터 용량이 너무 크면 접속을 끊어버리는 코드
+        /*
+        if (body.length > 1e6){
+          request.connection.destroy();
+        }
+        */
+      });
+      request.on('end', function(){
+        // 저장된 body값을 입력값으로 주면 post에 데이터가 들어갈 것
+        var post = qs.parse(body);
+        var title = post.title;
+        var description = post.description;
+        fs.writeFile(`D:/D드라이브 고유파일/Nodejs/data/${title}`, description, 'utf8', function(err){
+          response.writeHead(302, {Location: `/?id=${title}`});
+          response.end();
+        });
+      });
+    }
     else {
       response.writeHead(404);
       response.end('Not Found');
