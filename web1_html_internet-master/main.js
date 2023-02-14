@@ -2,43 +2,9 @@ var http = require('http');
 var fs = require('fs');
 var url = require('url');
 var qs = require('querystring');
-
-// 템플릿 변수를 함수화 한것
-function templateHtml(title, list, body, control){
-  return `
-  <!doctype html>
-  <html>
-  <head>
-    <title>WEB1 - ${title}</title>
-    <meta charset="utf-8">
-  </head>
-  <body>
-    <h1><a href="/">WEB</a></h1>
-    ${list}
-    ${control}
-    ${body}
-  </body>
-  </html>
-  `;
-  /* ${body} 대체 전 코드
-  <h2>${title}</h2>
-    <p>${description}</p>
-  */
-}
-
-// 파일 리스트에 대한 템플릿 함수
-function templateList(filelist){
-  var list = '<ul>';
-  var i = 0;
-  while (i < filelist.length){
-    list = list + `<li><a href="/?id=${filelist[i]}">${filelist[i]}</a></li>`;
-    i = i + 1;
-  }
-  list = list + '</ul>';
-  return list;
-}
-
-
+// template 객체를 모듈화 하여 require로 포함
+var template = require('../lib/template.js');
+var path = require('path');
 var app = http.createServer(function(request,response){
     var _url = request.url;
     var queryData = url.parse(_url, true).query;
@@ -66,38 +32,40 @@ var app = http.createServer(function(request,response){
           var title = 'Welcome';
           var description = 'Hello, Node.js';
 
-          var list = templateList(filelist);
-
+          var list = template.list(filelist);
           // template 변수에 html 코드가 아닌 함수를 넣으면 코드 간소화 가능
-          var template = templateHtml(title, list, `<h2>${title}</h2>
+          var html = template.html(title, list, `<h2>${title}</h2>
           <p>${description}</p>`, `
           <a href="/create">Create</a>`);
           response.writeHead(200);
           //여기서 localhost:3000?id=[id값]을 입력할 때 id값에 따라 출력이 결정됨
-          response.end(template);
+          response.end(html);
         });
       }
       else{
         fs.readdir('D:/D드라이브 고유파일/Nodejs/data/', function(error, filelist){
-          /*
-          var list = `<ul>
-              <li><a href="/?id=HTML">HTML</a></li>
-              <li><a href="/?id=CSS">CSS</a></li>
-              <li><a href="/?id=JavaScript">JavaScript</a></li>
-            </ul>`;
-          */
- 
-          var list = templateList(filelist);
+          // 파일의 경로탐색에 대해 Password 등의 정보 유출을 막기 위한 처리
+          var filterId = path.parse(queryData.id).base;
+          var list = template.list(filelist);
 
-          fs.readFile(`D:/D드라이브 고유파일/Nodejs/data/${queryData.id}`, 'utf-8', function(err, description){
+          fs.readFile(`D:/D드라이브 고유파일/Nodejs/data/${filterId}`, 'utf-8', function(err, description){
             var title = queryData.id;
-            var template = templateHtml(title, list, `<h2>${title}</h2>
+            var html = template.html(title, list, `<h2>${title}</h2>
             <p>${description}</p>`,
             `
-            <a href="/create">Create</a> <a href = "/update?id=${title}">Update</a>`);
+            <a href= "/create">Create</a> 
+            <a href = "/update?id=${title}">Update</a>    
+            <form action="delete_process" method="post">
+              <input type="hidden" name="id" value="${title}">
+              <input type="submit" value="delete">
+            </form>`);
+            // QueryString을 사용하는 것은 Get 방식
+            /* 삭제 버튼을 Link로 구현하는 것은 대단히 잘못된일(소스를 조작할 수 있기 때문)
+            <a href = "/delete?id=${title}">Delete</a> 
+            */
             response.writeHead(200);
             //여기서 localhost:3000?id=[id값]을 입력할 때 id값에 따라 출력이 결정됨
-            response.end(template);
+            response.end(html);
           });
         });
       }
@@ -111,8 +79,8 @@ var app = http.createServer(function(request,response){
       if(queryData.id === undefined) {
         fs.readdir('D:/D드라이브 고유파일/Nodejs/data', function(error, filelist){
           var title = 'WEB-Create';
-          var list = templateList(filelist);
-          var template = templateHtml(title, list, `
+          var list = template.list(filelist);
+          var html = template.html(title, list, `
             <form action="http://localhost:3000/create_process" method="post">
             <p><input type="text" name="title" 
             placeholder="title"></p>
@@ -126,7 +94,7 @@ var app = http.createServer(function(request,response){
             </form>
           `);
           response.writeHead(200);
-          response.end(template);
+          response.end(html);
         });
       }
     }
@@ -156,11 +124,12 @@ var app = http.createServer(function(request,response){
       });
     }
     else if (pathname === '/update') {
+      var filterId = path.parse(queryData.id).base;
       fs.readdir('D:/D드라이브 고유파일/Nodejs/data/', function(error, filelist){
-        fs.readFile(`D:/D드라이브 고유파일/Nodejs/data/${queryData.id}`, 'utf-8', function(err, description){
+        fs.readFile(`D:/D드라이브 고유파일/Nodejs/data/${filterId}`, 'utf-8', function(err, description){
           var title = queryData.id;
-          var list = templateList(filelist);
-          var template = templateHtml(title, list, `
+          var list = template.list(filelist);
+          var html = template.html(title, list, `
             <form action="http://localhost:3000/update_process" method="post">
             <input type="hidden" name="id" value="${title}">
             <p><input type="text" name="title" 
@@ -178,7 +147,7 @@ var app = http.createServer(function(request,response){
           <a href="/create">Create</a> 
           <a href = "/update?id=${title}">Update</a>`);
           response.writeHead(200);
-          response.end(template);
+          response.end(html);
         });
       });
     }
@@ -191,9 +160,10 @@ var app = http.createServer(function(request,response){
       request.on('end', function(){
         var post = qs.parse(body);
         var id = post.id;
+        var filterId = path.parse(id).base;
         var title = post.title;
         var description = post.description;
-          fs.rename(`D:/D드라이브 고유파일/Nodejs/data/${id}`, `D:/D드라이브 고유파일/Nodejs/data/${title}`, function(error){
+          fs.rename(`D:/D드라이브 고유파일/Nodejs/data/${filterId}`, `D:/D드라이브 고유파일/Nodejs/data/${title}`, function(error){
             fs.writeFile(`D:/D드라이브 고유파일/Nodejs/data/${title}`, description, 'utf8', function(err){
               response.writeHead(302, {Location: `/?id=${title}`});
               response.end();
@@ -204,6 +174,21 @@ var app = http.createServer(function(request,response){
           response.end();
         });
         */
+      });
+    }
+    else if(pathname === '/delete_process') {
+      var body = '';
+      request.on('data', function(data){
+        body += data;
+      });
+      request.on('end', function(){
+        var post = qs.parse(body);
+        var id = post.id;
+        var filterId = path.parse(id).base;
+        fs.unlink(`D:/D드라이브 고유파일/Nodejs/data/${filterId}`, function(error){
+          response.writeHead(302, {Location: '/'});
+          response.end();
+        });
       });
     }
     else {

@@ -4,3 +4,5 @@
 - SQL문과 많이 엮인다.
 - Create는 INSERT, Read는 SELECT, Update는 UPDATE, Delete는 Delete구문과 많이 엮인다.
 
+# 2. HTML Entities
+- 보안에 관한 문제를 최소화 하기 위해 특정 기호를 Entity로 대체할 수 있다.
