@@ -5,6 +5,8 @@ var qs = require('querystring');
 // template 객체를 모듈화 하여 require로 포함
 var template = require('../lib/template.js');
 var path = require('path');
+var sanitizeHTML = require('sanitize-html');
+
 var app = http.createServer(function(request,response){
     var _url = request.url;
     var queryData = url.parse(_url, true).query;
@@ -45,18 +47,24 @@ var app = http.createServer(function(request,response){
       else{
         fs.readdir('D:/D드라이브 고유파일/Nodejs/data/', function(error, filelist){
           // 파일의 경로탐색에 대해 Password 등의 정보 유출을 막기 위한 처리
+          // sanitize 기법이라고 부름
           var filterId = path.parse(queryData.id).base;
           var list = template.list(filelist);
-
           fs.readFile(`D:/D드라이브 고유파일/Nodejs/data/${filterId}`, 'utf-8', function(err, description){
             var title = queryData.id;
-            var html = template.html(title, list, `<h2>${title}</h2>
-            <p>${description}</p>`,
+            // 태그는 없애지만 내용은 살리는 기능을 갖고있음
+            var sanitizedTitle =  sanitizeHTML(title);
+            var sanitizedDescription = sanitizeHTML(description, {
+              allowedTags:['h1']
+            });
+            
+            var html = template.html(title, list, `<h2>${sanitizedTitle}</h2>
+            <p>${sanitizedDescription}</p>`,
             `
             <a href= "/create">Create</a> 
-            <a href = "/update?id=${title}">Update</a>    
+            <a href = "/update?id=${sanitizedTitle}">Update</a>    
             <form action="delete_process" method="post">
-              <input type="hidden" name="id" value="${title}">
+              <input type="hidden" name="id" value="${sanitizedTitle}">
               <input type="submit" value="delete">
             </form>`);
             // QueryString을 사용하는 것은 Get 방식
